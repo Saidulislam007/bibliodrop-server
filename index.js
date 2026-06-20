@@ -3,7 +3,7 @@ const cors = require('cors');
 const express = require('express')
 const app = express()
 const port = 5000
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion ,ObjectId } = require('mongodb');
 app.use(cors());
 app.use(express.json());
 
@@ -40,28 +40,49 @@ async function run() {
     });
 
     app.get('/books', async (req, res) => {
-  try {
-    // URL theke query parameters nilam (category ar author diye query korar jonno)
-    const { category, author } = req.query; 
-    
-    let query = {};
-    
-    // database-e "category" name column ache, tai ekhane category check korlam
-    if (category) {
-      query.category = category;
-    }
-    if (author) {
-      query.author = author;
-    }
-    
-    const result = await booksCollection.find(query).toArray();
-    res.send(result);
-    
-  } catch (error) {
-    console.error("Error fetching books:", error);
-    res.status(500).send({ message: "Internal server error" });
-  }
-});
+      try {
+        // URL theke query parameters nilam (category ar author diye query korar jonno)
+        const { category, author } = req.query;
+
+        let query = {};
+
+        // database-e "category" name column ache, tai ekhane category check korlam
+        if (category) {
+          query.category = category;
+        }
+        if (author) {
+          query.author = author;
+        }
+
+        const result = await booksCollection.find(query).toArray();
+        res.send(result);
+
+      } catch (error) {
+        console.error("Error fetching books:", error);
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
+
+
+    // 🟢 আপনার এক্সপ্রেস ব্যাকএন্ডের রাউট স্ট্রাকচার এমন হওয়া উচিত:
+    app.patch('/books/:id', async (req, res) => {
+      try {
+        const bookId = req.params.id;
+        const updateData = req.body;
+
+        // আপনার মঙ্গোডিবি আপডেট লজিক এখানে...
+        const result = await booksCollection.updateOne(
+          { _id: new ObjectId(bookId) },
+          { $set: updateData }
+        );
+
+        // 🛡️ অবশই JSON রেসপন্স রিটার্ন করতে হবে, কোনো HTML বা ডিরেক্ট স্ট্রিং নয়!
+        res.status(200).json({ success: true, result });
+      } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+      }
+    });
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

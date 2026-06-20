@@ -33,6 +33,11 @@ async function run() {
     const database = client.db("bibliodrop");
     const booksCollection = database.collection("books");
 
+    app.post('/books', async (req, res) => {
+      const book = req.body;
+      const result = await booksCollection.insertOne(book);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

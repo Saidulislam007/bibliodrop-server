@@ -39,6 +39,30 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/books', async (req, res) => {
+  try {
+    // URL theke query parameters nilam (category ar author diye query korar jonno)
+    const { category, author } = req.query; 
+    
+    let query = {};
+    
+    // database-e "category" name column ache, tai ekhane category check korlam
+    if (category) {
+      query.category = category;
+    }
+    if (author) {
+      query.author = author;
+    }
+    
+    const result = await booksCollection.find(query).toArray();
+    res.send(result);
+    
+  } catch (error) {
+    console.error("Error fetching books:", error);
+    res.status(500).send({ message: "Internal server error" });
+  }
+});
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");

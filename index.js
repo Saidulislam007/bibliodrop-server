@@ -245,6 +245,34 @@ async function run() {
       }
     });
 
+    // 🔍 ইউজারভিত্তিক উইশলিস্টের ডাটা গেট (GET) করার এপিআই রাউট
+    app.get('/wishlist', async (req, res) => {
+      try {
+        // ফ্রন্টএন্ড থেকে কোয়েরি প্যারামিটার হিসেবে পাঠানো ইউজারের ইমেইলটি নেওয়া হলো
+        const { email } = req.query;
+
+        let query = {};
+
+        // যদি ইমেইল পাঠানো হয়, তবে শুধুমাত্র সেই নির্দিষ্ট ইউজারের উইশলিস্ট ফিল্টার হবে
+        if (email) {
+          query.userEmail = email; // ফ্রন্টএন্ড থেকে আমরা 'userEmail' ফিল্ডে ডাটা পাঠিয়েছিলাম ভাই
+        }
+
+        // ডাটাবেজ থেকে ফিল্টার করা ডাটা খোঁজা এবং অ্যারেতে কনভার্ট করা
+        const result = await wishlistCollection.find(query).toArray();
+        
+        // সফলভাবে ডাটা ক্লায়েন্ট সাইডে পাঠানো হচ্ছে
+        res.status(200).send(result);
+
+      } catch (error) {
+        console.error("Express Error in GET /wishlist:", error);
+        res.status(500).send({ 
+          success: false, 
+          message: "Internal Server Error while fetching wishlist node assets." 
+        });
+      }
+    });
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

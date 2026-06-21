@@ -31,6 +31,7 @@ async function run() {
     const booksCollection = database.collection("books");
     const usersCollection = database.collection("user");
     const wishlistCollection = database.collection("wishlists");
+    const deliveriesCollection = database.collection("deliveries");
 
 
     app.get('/users', async (req, res) => {
@@ -274,28 +275,65 @@ async function run() {
     });
 
     // 🗑️ ডাটাবেজ থেকে নির্দিষ্ট উইশলিস্টের আইটেম ডিলিট করার API
-    app.app.delete('/wishlist/:id', async (req, res) => {
-      try {
-        const id = req.params.id;
+    // 🟢 ১০০% সঠিক এবং ফিক্সড কোড:
+app.delete('/wishlist/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
 
-        // মঙ্গোডিবির ObjectId ফরম্যাট ভ্যালিডেশন চেক
-        if (!ObjectId.isValid(id)) {
-          return res.status(400).json({ success: false, message: "Invalid Wishlist ID format." });
-        }
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid Wishlist ID format." });
+    }
 
-        const query = { _id: new ObjectId(id) };
-        const result = await wishlistCollection.deleteOne(query);
+    const query = { _id: new ObjectId(id) };
+    const result = await wishlistCollection.deleteOne(query);
 
-        if (result.deletedCount === 1) {
-          res.status(200).json({ success: true, message: "Asset removed from wishlist database." });
-        } else {
-          res.status(404).json({ success: false, message: "Wishlist item not found." });
-        }
-      } catch (error) {
-        console.error("Express Error in DELETE /wishlist/:id:", error);
-        res.status(500).json({ success: false, message: "Internal Server Error: " + error.message });
-      }
+    if (result.deletedCount === 1) {
+      res.status(200).json({ success: true, message: "Asset removed from wishlist database." });
+    } else {
+      res.status(404).json({ success: false, message: "Wishlist item not found." });
+    }
+  } catch (error) {
+    console.error("Express Error in DELETE /wishlist/:id:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error: " + error.message });
+  }
+});
+
+app.post('/deliveries', async (req, res) => {
+  try {
+    const deliveryData = req.body;
+
+    // সেফটি ভ্যালিডেশন চেক
+    if (!deliveryData.userId || !deliveryData.bookId) {
+      return res.status(400).json({ success: false, message: "Missing core identifiers." });
+    }
+
+    // [🧠 অপশনাল চেক] একই ইউজার অলরেডি এই বইটির জন্য রিকোয়েস্ট পেন্ডিং রেখেছে কিনা
+    const isAlreadyRequested = await deliveriesCollection.findOne({
+      userId: deliveryData.userId,
+      bookId: deliveryData.bookId,
+      deliveryStatus: "Pending" // শুধুমাত্র পেন্ডিং রিকোয়েস্ট ট্র্যাক করার জন্য
     });
+
+    if (isAlreadyRequested) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "You already have a pending delivery request for this book!" 
+      });
+    }
+
+    // ডেলিভারি কালেকশনে সম্পূর্ণ ডাটা পুশ করা হলো
+    const result = await deliveriesCollection.insertOne(deliveryData);
+
+    res.status(201).json({ 
+      success: true, 
+      insertedId: result.insertedId 
+    });
+
+  } catch (error) {
+    console.error("Express Error in POST /deliveries:", error);
+    res.status(500).json({ success: false, message: "Server Error: " + error.message });
+  }
+});
 
 
     // Send a ping to confirm a successful connection

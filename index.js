@@ -70,6 +70,46 @@ async function run() {
       }
     });
 
+
+    app.patch('/users/:id/role', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { role } = req.body; // ফ্রন্টএন্ড থেকে পাঠানো নতুন রোলটি রিসিভ করা হলো
+
+    // ১. মঙ্গোডিবি আইডি ফরম্যাট ভ্যালিডেশন চেক
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid User ID format." });
+    }
+
+    // ২. সিকিউরিটির জন্য রোল চেক (যাতে কেউ উল্টাপাল্টা রোল পুশ না করতে পারে)
+    const allowedRoles = ["user", "admin", "librarian"];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ success: false, message: "Invalid role type specified." });
+    }
+
+    const query = { _id: new ObjectId(id) };
+    const updateDoc = {
+      $set: { role: role } // 🔄 শুধুমাত্র রোল ফিল্ডটি আপডেট হবে
+    };
+
+    // ৩. মঙ্গোডিবিতে আপডেট কুয়েরি এক্সিকিউট করা
+    const result = await usersCollection.updateOne(query, updateDoc);
+
+    if (result.modifiedCount === 1 || result.matchedCount === 1) {
+      res.status(200).json({ 
+        success: true, 
+        message: "User role updated successfully.", 
+        modifiedCount: result.modifiedCount 
+      });
+    } else {
+      res.status(404).json({ success: false, message: "User not found or role unchanged." });
+    }
+  } catch (error) {
+    console.error("Error in PATCH /users/:id/role:", error);
+    res.status(500).json({ success: false, message: "Server error: " + error.message });
+  }
+});
+
     app.post('/books', async (req, res) => {
       const book = req.body;
       const result = await booksCollection.insertOne(book);

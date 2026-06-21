@@ -30,6 +30,7 @@ async function run() {
     const database = client.db("bibliodrop");
     const booksCollection = database.collection("books");
     const usersCollection = database.collection("user");
+    const wishlistCollection = database.collection("wishlists");
 
 
     app.get('/users', async (req, res) => {
@@ -199,6 +200,47 @@ async function run() {
         res.status(500).json({
           success: false,
           message: "Internal Server Error: " + error.message
+        });
+      }
+    });
+
+    // 💖 ✅ উইশলিস্টে ডাটা অ্যাড করার জন্য পারফেক্ট POST মেথড
+    app.post('/wishlist', async (req, res) => {
+      try {
+        const wishlistData = req.body;
+
+        // ১. মঙ্গোডিবির আইডি ভ্যালিডেশন সেফটি চেক
+        if (!wishlistData.userId || !wishlistData.bookId) {
+          return res.status(400).json({ success: false, message: "Missing required identifier fields." });
+        }
+
+        // ২. ডুপ্লিকেট এন্ট্রি আটকানো (একই ইউজার একই বই যাতে ২ বার অ্যাড না করতে পারে)
+        const isAlreadyExist = await wishlistCollection.findOne({
+          userId: wishlistData.userId,
+          bookId: wishlistData.bookId
+        });
+
+        if (isAlreadyExist) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "This library asset is already in your wishlist mesh!" 
+          });
+        }
+
+        // ৩. আপনার উইশলিস্ট কালেকশনে সম্পূর্ণ ডাটা ডকুমেন্ট পুশ করা
+        const result = await wishlistCollection.insertOne(wishlistData);
+
+        // 🟢 আপনার ফ্রন্টএন্ড কন্ডিশনের সাথে রেসপন্স ম্যাচ করে রিটার্ন করা হলো ভাই
+        res.status(201).json({ 
+          success: true, 
+          insertedId: result.insertedId 
+        });
+
+      } catch (error) {
+        console.error("Express Error in POST /wishlist:", error);
+        res.status(500).json({ 
+          success: false, 
+          message: "Internal Server Registry Collapse: " + error.message 
         });
       }
     });

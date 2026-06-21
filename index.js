@@ -273,6 +273,30 @@ async function run() {
       }
     });
 
+    // 🗑️ ডাটাবেজ থেকে নির্দিষ্ট উইশলিস্টের আইটেম ডিলিট করার API
+    app.app.delete('/wishlist/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        // মঙ্গোডিবির ObjectId ফরম্যাট ভ্যালিডেশন চেক
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).json({ success: false, message: "Invalid Wishlist ID format." });
+        }
+
+        const query = { _id: new ObjectId(id) };
+        const result = await wishlistCollection.deleteOne(query);
+
+        if (result.deletedCount === 1) {
+          res.status(200).json({ success: true, message: "Asset removed from wishlist database." });
+        } else {
+          res.status(404).json({ success: false, message: "Wishlist item not found." });
+        }
+      } catch (error) {
+        console.error("Express Error in DELETE /wishlist/:id:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error: " + error.message });
+      }
+    });
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

@@ -335,6 +335,52 @@ app.post('/deliveries', async (req, res) => {
   }
 });
 
+// 🔍 ইউজারভিত্তিক ডেলিভারি লিস্ট গেট করার এক্সপ্রেস রাউট
+    app.get('/deliveries', async (req, res) => {
+      try {
+        const { email } = req.query;
+        let query = {};
+
+        if (email) {
+          query.userEmail = email; // কারেন্ট ইউজারের ইমেইল ফিল্টার
+        }
+
+        const result = await deliveriesCollection.find(query).toArray();
+        res.status(200).send(result);
+      } catch (error) {
+        console.error("Express Error in GET /deliveries:", error);
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // 🔄 ডাটাবেজে নির্দিষ্ট ডেলিভারি রিকোয়েস্টের স্ট্যাটাস আপডেট করার PATCH রাউট
+    app.patch('/deliveries/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { deliveryStatus } = req.body; // ফ্রন্টঅ্যান্ড থেকে পাঠানো নতুন স্ট্যাটাস
+
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).json({ success: false, message: "Invalid Delivery ID format." });
+        }
+
+        const query = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: { deliveryStatus: deliveryStatus } // 🔄 শুধুমাত্র deliveryStatus ফিল্ডটি ডাটাবেজে আপডেট হবে
+        };
+
+        const result = await deliveriesCollection.updateOne(query, updateDoc);
+
+        if (result.modifiedCount === 1 || result.matchedCount === 1) {
+          res.status(200).json({ success: true, message: `Status updated to ${deliveryStatus}` });
+        } else {
+          res.status(404).json({ success: false, message: "Delivery record not found or unchanged." });
+        }
+      } catch (error) {
+        console.error("Express Error in PATCH /deliveries/:id:", error);
+        res.status(500).json({ success: false, message: "Server error: " + error.message });
+      }
+    });
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

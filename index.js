@@ -3,7 +3,7 @@ const cors = require('cors');
 const express = require('express')
 const app = express()
 const port = 5000
-const { MongoClient, ServerApiVersion ,ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 app.use(cors());
 app.use(express.json());
 
@@ -29,6 +29,32 @@ async function run() {
 
     const database = client.db("bibliodrop");
     const booksCollection = database.collection("books");
+    const usersCollection = database.collection("user");
+
+
+    app.get('/users', async (req, res) => {
+      try {
+        // ইউআরএল কোয়েরি প্যারামিটার থেকে ইমেইল বা রোল ফিল্টারিং সাপোর্ট
+        const { email, role } = req.query;
+
+        let query = {};
+
+        if (email) {
+          query.email = email;
+        }
+        if (role) {
+          query.role = role;
+        }
+
+        // ডাটাবেজ থেকে ডেটা খোঁজা এবং অ্যারেতে কনভার্ট করা
+        const result = await usersCollection.find(query).toArray();
+        res.status(200).send(result);
+
+      } catch (error) {
+        console.error("Error fetching users from database:", error);
+        res.status(500).send({ success: false, message: "Internal server error" });
+      }
+    });
 
     app.post('/books', async (req, res) => {
       const book = req.body;
@@ -82,46 +108,46 @@ async function run() {
 
 
     app.delete('/books/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
+      try {
+        const id = req.params.id;
 
-    // ১. মঙ্গোডিবির ObjectId ফরম্যাট চেক (ভুল বা ইনভ্যালিড আইডি হ্যান্ডেল করার জন্য)
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid Book ID format." 
-      });
-    }
+        // ১. মঙ্গোডিবির ObjectId ফরম্যাট চেক (ভুল বা ইনভ্যালিড আইডি হ্যান্ডেল করার জন্য)
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid Book ID format."
+          });
+        }
 
-    // ২. নির্দিষ্ট আইডির বইটিকে খোঁজার কোয়েরি
-    const query = { _id: new ObjectId(id) };
+        // ২. নির্দিষ্ট আইডির বইটিকে খোঁজার কোয়েরি
+        const query = { _id: new ObjectId(id) };
 
-    // ৩. মঙ্গোডিবি ডিলিট অপারেশন রান করা (booksCollection এর জায়গায় আপনার কালেকশন ভ্যারিয়েবল নাম দিন)
-    const result = await booksCollection.deleteOne(query);
+        // ৩. মঙ্গোডিবি ডিলিট অপারেশন রান করা (booksCollection এর জায়গায় আপনার কালেকশন ভ্যারিয়েবল নাম দিন)
+        const result = await booksCollection.deleteOne(query);
 
-    // ৪. যদি সত্যিই ডাটা ডিলিট হয় (deletedCount ১ বা তার বেশি হলে)
-    if (result.deletedCount === 1) {
-      res.status(200).json({
-        success: true,
-        message: "Book successfully deleted from database.",
-        deletedCount: result.deletedCount
-      });
-    } else {
-      // যদি এই আইডির কোনো বই ডাটাবেজে খুঁজে না পাওয়া যায়
-      res.status(404).json({
-        success: false,
-        message: "No book asset found with this ID."
-      });
-    }
+        // ৪. যদি সত্যিই ডাটা ডিলিট হয় (deletedCount ১ বা তার বেশি হলে)
+        if (result.deletedCount === 1) {
+          res.status(200).json({
+            success: true,
+            message: "Book successfully deleted from database.",
+            deletedCount: result.deletedCount
+          });
+        } else {
+          // যদি এই আইডির কোনো বই ডাটাবেজে খুঁজে না পাওয়া যায়
+          res.status(404).json({
+            success: false,
+            message: "No book asset found with this ID."
+          });
+        }
 
-  } catch (error) {
-    console.error("Express Error in DELETE /books/:id:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Internal Server Error: " + error.message 
+      } catch (error) {
+        console.error("Express Error in DELETE /books/:id:", error);
+        res.status(500).json({
+          success: false,
+          message: "Internal Server Error: " + error.message
+        });
+      }
     });
-  }
-});
 
 
     // Send a ping to confirm a successful connection

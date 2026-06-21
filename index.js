@@ -84,6 +84,49 @@ async function run() {
     });
 
 
+    app.delete('/books/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // ১. মঙ্গোডিবির ObjectId ফরম্যাট চেক (ভুল বা ইনভ্যালিড আইডি হ্যান্ডেল করার জন্য)
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid Book ID format." 
+      });
+    }
+
+    // ২. নির্দিষ্ট আইডির বইটিকে খোঁজার কোয়েরি
+    const query = { _id: new ObjectId(id) };
+
+    // ৩. মঙ্গোডিবি ডিলিট অপারেশন রান করা (booksCollection এর জায়গায় আপনার কালেকশন ভ্যারিয়েবল নাম দিন)
+    const result = await booksCollection.deleteOne(query);
+
+    // ৪. যদি সত্যিই ডাটা ডিলিট হয় (deletedCount ১ বা তার বেশি হলে)
+    if (result.deletedCount === 1) {
+      res.status(200).json({
+        success: true,
+        message: "Book successfully deleted from database.",
+        deletedCount: result.deletedCount
+      });
+    } else {
+      // যদি এই আইডির কোনো বই ডাটাবেজে খুঁজে না পাওয়া যায়
+      res.status(404).json({
+        success: false,
+        message: "No book asset found with this ID."
+      });
+    }
+
+  } catch (error) {
+    console.error("Express Error in DELETE /books/:id:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Internal Server Error: " + error.message 
+    });
+  }
+});
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");

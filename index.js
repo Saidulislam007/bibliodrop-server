@@ -56,6 +56,20 @@ async function run() {
       }
     });
 
+
+    // 🟢 আপনার এক্সপ্রেস সার্ভার ফাইলে এটি চেক করুন:
+    app.delete('/users/:id', async (req, res) => { // ⚠️ নিশ্চিত করুন এখানে 'users' লেখা (user নয়)
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+
+        const result = await usersCollection.deleteOne(query);
+        res.send({ success: true, ...result });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
     app.post('/books', async (req, res) => {
       const book = req.body;
       const result = await booksCollection.insertOne(book);

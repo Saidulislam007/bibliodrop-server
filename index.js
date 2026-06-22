@@ -445,6 +445,22 @@ async function run() {
       }
     });
 
+    app.get('/reviews', async (req, res) => {
+  try {
+    // 🎯 কালেকশনের সব ডাটা কোনো কন্ডিশন ছাড়াই অ্যারে আকারে নিয়ে আসা হলো ভাই
+    const result = await reviewsCollection.find().toArray();
+    
+    // সরাসরি সম্পূর্ণ ডাটা রেসপন্স হিসেবে রিটার্ন
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Express Error in GET /reviews:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Internal Server Review Fetch Collapse: " + error.message 
+    });
+  }
+});
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

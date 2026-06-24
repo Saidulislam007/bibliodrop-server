@@ -4,8 +4,17 @@ const express = require('express')
 const app = express()
 const port = 5000
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000'], // আপনার ফ্রন্টএন্ডের ইউআরএল
+  credentials: true, // এটি কুকি এবং ক্রেডেনশিয়াল হ্যান্ডশেক পাস করতে সাহায্য করবে ভাই
+  optionsSuccessStatus: 200
+}));
 app.use(express.json());
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+
+// 🟢 এক্সপ্রেস মিডলওয়্যার রেজিস্ট্রি
+app.use(cookieParser());
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
@@ -119,29 +128,40 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/books', async (req, res) => {
-      try {
-        // URL theke query parameters nilam (category ar author diye query korar jonno)
-        const { category, author } = req.query;
+    // Express Backend: Pagination Route
+app.get('/books', async (req, res) => {
+  try {
+    // ফ্রন্টএন্ড থেকে পাঠানো page এবং limit রিড করা (ডিফল্ট: page=1, limit=6)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 6;
+    
+    // ডাটা স্কিপ করার হিসাব (যেমন: page ২ হলে প্রথম ৬টা স্কিপ হবে)
+    const skip = (page - 1) * limit;
 
-        let query = {};
+    const query = { status: "Published" }; // শুধুমাত্র পাবলিশড বই
 
-        // database-e "category" name column ache, tai ekhane category check korlam
-        if (category) {
-          query.category = category;
-        }
-        if (author) {
-          query.author = author;
-        }
+    // ১. টোটাল কতগুলো বই আছে তা কাউন্ট করা (টোটাল পেজ হিসাবের জন্য ভাই)
+    const totalBooks = await booksCollection.countDocuments(query);
 
-        const result = await booksCollection.find(query).toArray();
-        res.send(result);
+    // ২. নির্দিষ্ট পেজের ডাটা স্কিপ ও লিমিট করে তুলে আনা
+    const books = await booksCollection.find(query)
+                                      .skip(skip)
+                                      .limit(limit)
+                                      .toArray();
 
-      } catch (error) {
-        console.error("Error fetching books:", error);
-        res.status(500).send({ message: "Internal server error" });
-      }
+    // রেসপন্সে ডাটা এবং টোটাল কাউন্ট একসাথে পাঠানো হলো
+    res.status(200).json({
+      success: true,
+      books,
+      totalBooks,
+      totalPages: Math.ceil(totalBooks / limit),
+      currentPage: page
     });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 
     // 🟢 আপনার এক্সপ্রেস ব্যাকএন্ডের রাউট স্ট্রাকচার এমন হওয়া উচিত:
@@ -445,6 +465,110 @@ async function run() {
       }
     });
 
+    const { ObjectId } = require('mongodb'); // 👈 ফাইলের শুরুতে ObjectId ইম্পোর্ট করা না থাকলে এটি নিশ্চিত করে নিবেন ভাই
+
+// ==========================================
+// ✏️ ১. REVIEW EDIT/UPDATE METHOD (PUT)
+// ==========================================
+app.put('/reviews/:id', async (req, res) => {
+  try {
+    const reviewId = req.params.id;
+    const { comment, rating } = req.body;
+
+    // আইডি ভ্যালিডেশন চেক ভাই
+    if (!ObjectId.isValid(reviewId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Review ID format."
+      });
+    }
+
+    // মিনিমাম ভ্যালিডেশন সেফটি চেক
+    if (!comment?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment text cannot be empty during modification."
+      });
+    }
+
+    // মঙ্গোডিবির জন্য আপডেটেড ডক রেডি করা ভাই
+    const updatedPayload = {
+      $set: {
+        comment: comment.trim(),
+        rating: Number(rating) || 5,
+        updatedAt: new Date().toISOString() // কখন আপডেট হলো তার টাইমস্ট্যাম্প
+      }
+    };
+
+    const filter = { _id: new ObjectId(reviewId) };
+    const result = await reviewsCollection.updateOne(filter, updatedPayload);
+
+    // চেক করা হলো ডকুমেন্টটি ডাটাবেজে ম্যাচ করে মডিফাই হয়েছে কিনা ভাই
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Target review asset not found in database registry."
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Review updated successfully.",
+      modifiedCount: result.modifiedCount
+    });
+
+  } catch (error) {
+    console.error("Express Error in PUT /reviews:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Update Pipeline Collapse: " + error.message
+    });
+  }
+});
+
+
+// ==========================================
+// 🗑️ ২. REVIEW DELETE METHOD (DELETE)
+// ==========================================
+app.delete('/reviews/:id', async (req, res) => {
+  try {
+    const reviewId = req.params.id;
+
+    // আইডি ভ্যালিডেশন চেক ভাই
+    if (!ObjectId.isValid(reviewId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Review ID format."
+      });
+    }
+
+    const filter = { _id: new ObjectId(reviewId) };
+    const result = await reviewsCollection.deleteOne(filter);
+
+    // চেক করা হলো ডিলিট কাউন্ট ১ বা তার বেশি কিনা
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found or already wiped from database core grid."
+      });
+    }
+
+    // ফ্রন্টএন্ড কন্ডিশনের (result.success) সাথে মিলিয়ে সাকসেস রেসপন্স রিটার্ন ভাই
+    res.status(200).json({
+      success: true,
+      message: "Review successfully wiped from database.",
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error("Express Error in DELETE /reviews:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Deletion Pipeline Collapse: " + error.message
+    });
+  }
+});
+
     app.get('/reviews', async (req, res) => {
   try {
     // 🎯 কালেকশনের সব ডাটা কোনো কন্ডিশন ছাড়াই অ্যারে আকারে নিয়ে আসা হলো ভাই
@@ -458,6 +582,71 @@ async function run() {
       success: false, 
       message: "Internal Server Review Fetch Collapse: " + error.message 
     });
+  }
+});
+
+const verifyJWT = (req, res, next) => {
+  try {
+    // 💡 আপনার ফ্রন্টএন্ড যে নামে কুকি সেভ করে (যেমন: 'token') সেটি এখান থেকে রিড হবে ভাই
+    const token = req.cookies?.token;
+
+    // টোকেন না থাকলে সরাসরি এক্সেস ডিনাইড ভাই
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "🔒 Access Unauthorized: Token payload missing in registry."
+      });
+    }
+
+    // টোকেন ভেরিফিকেশন হ্যান্ডশেক
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) {
+        return res.status(403).json({
+          success: false,
+          message: "🚫 Forbidden: Invalid or expired encryption token."
+        });
+      }
+
+      // 👤 ভেরিফাইড ইউজারের ডেটা (যেমন: email, id) রিকোয়েস্ট অবজেক্টে পুশ করা হলো
+      req.user = decoded; 
+      
+      next(); // সব ঠিক থাকলে পরবর্তী এক্সিকিউশন নোডে পাস করে দেবে ভাই
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal Auth Node Collapse: " + error.message });
+  }
+};
+
+app.get('/deliveries', verifyJWT, async (req, res) => {
+  try {
+    // 💡 ম্যাজিক: টোকেন ডিকোড হয়ে req.user এর ভেতর এখন লগইন থাকা ইউজারের ইমেইল বা আইডি লাইভ আছে ভাই!
+    const loggedInUserEmail = req.user.email; 
+    const emailQuery = req.query.email;
+
+    let query = {};
+    if (emailQuery && emailQuery.trim() !== "") {
+      query = { userEmail: emailQuery };
+    }
+
+    const result = await deliveriesCollection.find(query).toArray();
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/reviews/:id', verifyJWT, async (req, res) => {
+  try {
+    const reviewId = req.params.id;
+    
+    // সিকিউরিটি চেক: আপনি চাইলে req.user.id দিয়েও চেক করতে পারেন যে এই ইউজার তার নিজের রিভিউই ডিলিট করছে কিনা ভাই!
+    const filter = { _id: new ObjectId(reviewId) };
+    const result = await reviewsCollection.deleteOne(filter);
+    
+    res.status(200).json({ success: true, deletedCount: result.deletedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

@@ -428,26 +428,28 @@ app.get('/deliveries', async (req, res) => {
       }
     });
 
-    app.delete('/reviews/:id', verifyJWT, async (req, res) => {
-      try {
-        const reviewId = req.params.id;
+    app.delete('/reviews/:id', async (req, res) => {
+  try {
+    const reviewId = req.params.id;
 
-        if (!ObjectId.isValid(reviewId)) {
-          return res.status(400).json({ success: false, message: "Invalid Review ID format." });
-        }
+    if (!ObjectId.isValid(reviewId)) {
+      return res.status(400).json({ success: false, message: "Invalid Review ID format." });
+    }
 
-        const filter = { _id: new ObjectId(reviewId) };
-        const result = await reviewsCollection.deleteOne(filter);
+    const filter = { _id: new ObjectId(reviewId) };
+    const result = await reviewsCollection.deleteOne(filter);
 
-        if (result.deletedCount === 0) {
-          return res.status(404).json({ success: false, message: "Review not found." });
-        }
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: "Review not found." });
+    }
 
-        res.status(200).json({ success: true, deletedCount: result.deletedCount });
-      } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-      }
-    });
+    // 🟢 ফ্রন্টএন্ডের সুবিধার জন্য success: true প্রপার্টিসহ রেসপন্স পাঠানো হচ্ছে
+    res.status(200).json({ success: true, deletedCount: result.deletedCount });
+    
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {

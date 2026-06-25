@@ -16,7 +16,7 @@ if (process.env.FRONTEND_URL) {
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS','PATCH'],
   // 🟢 এখানে 'x-user-email' কাস্টম হেডারটি এলাউ করে দেওয়া হলো
   allowedHeaders: ['Content-Type', 'Authorization', 'x-user-email'] 
 }));

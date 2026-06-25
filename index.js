@@ -1,17 +1,14 @@
 require('dotenv').config();
-const cors = require('cors');
 const express = require('express');
+const cors = require('cors'); // 🟢 এখানে একবারই ডিক্লেয়ার করা হলো
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 
 const app = express();
-const port = process.env.PORT || 5000; // 🟢 রেন্ডার বা প্রোডাকশনের জন্য পোর্ট ডাইনামিক করা হলো
+const port = process.env.PORT || 5000; 
 
-// 🟢 এক্সপ্রেস মিডলওয়্যার রেজিস্ট্রি
-// 📄 আপনার ব্যাকএন্ড সার্ভার কোড (Express.js)
-const cors = require('cors');
-
+// 🟢 এক্সপ্রেস মিডলওয়্যার রেজিস্ট্রি (ডুপ্লিকেট রিমুভ করা হয়েছে)
 const allowedOrigins = ['http://localhost:3000'];
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
@@ -24,7 +21,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// 🟢 JWT ভেরিফিকেশন মিডলওয়্যার (সবার উপরে রাখা হলো যাতে সহজে সব রাউটে ব্যবহার করা যায়)
+// এক্সপ্রেস বডি পার্সার ও কুকি পার্সার মিডলওয়্যার
+app.use(express.json());
+app.use(cookieParser());
+
+// 🟢 JWT ভেরিফিকেশন মিডলওয়্যার
 const verifyJWT = (req, res, next) => {
   try {
     const token = req.cookies?.token;
@@ -69,12 +70,11 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server (optional starting in v4.7)
     await client.connect();
 
     const database = client.db("bibliodrop");
     const booksCollection = database.collection("books");
-    const usersCollection = database.collection("user"); // ⚠️ ডাটাবেজে নাম 'user' নাকি 'users' চেক করে নিয়েন ভাই
+    const usersCollection = database.collection("user"); 
     const wishlistCollection = database.collection("wishlists");
     const deliveriesCollection = database.collection("deliveries");
     const reviewsCollection = database.collection("reviews");
@@ -295,7 +295,6 @@ async function run() {
       }
     });
 
-    // 🟢 ফিক্সড: শুধুমাত্র ভেরিফাইড রাউটটি রাখা হলো টোকেন চেক করার জন্য
     app.get('/deliveries', verifyJWT, async (req, res) => {
       try {
         const emailQuery = req.query.email;
@@ -419,7 +418,6 @@ async function run() {
       }
     });
 
-    // 🟢 ফিক্সড: ডুপ্লিকেট রিমুভ করে শুধুমাত্র ভেরিফাইড ডিলিট রাউটটি রাখা হলো
     app.delete('/reviews/:id', verifyJWT, async (req, res) => {
       try {
         const reviewId = req.params.id;

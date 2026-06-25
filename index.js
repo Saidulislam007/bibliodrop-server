@@ -6,11 +6,14 @@ const port = 5000
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 app.use(cors({
   origin: [
-     // লোকাল হোস্টে কাজ করার জন্য
-    process.env.FRONTEND_URL // Vercel-এর লাইভ ফ্রন্টএন্ডের জন্য
+    "http://localhost:3000", // 🟢 লোকাল হোস্টে ব্রাউজারে কাজ করার জন্য এটি বাধ্যতামূলক ভাই!
+    "http://localhost:5001", // আপনার এক্সপ্রেস ব্যাকএন্ড যদি এই পোর্টেও রিকোয়েস্ট নেয়
+    process.env.FRONTEND_URL  // Vercel-এর লাইভ ফ্রন্টএন্ডের জন্য (আপনার .env ফাইলে যা দেওয়া আছে)
   ], 
   credentials: true, 
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.use(express.json());
 const cookieParser = require('cookie-parser');
@@ -134,51 +137,32 @@ const client = new MongoClient(uri, {
     });
 
     // Express Backend: Pagination Route
-app.get('/api/books', async (req, res) => {
+export const getBooks = async (search = "", category = "All", page = 1, limit = 6) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 6;
-    const search = req.query.search || "";
-    const category = req.query.category || "All";
+    // 🎯 আপনার একদম সঠিক এবং নতুন লাইভ ব্যাকএন্ড লিংক ভাই!
     
-    const skip = (page - 1) * limit;
+    
+    // 🔗 বাকি ফাংশনগুলোর মতো একদম সিম্পল উপায়ে ডিরেক্ট ইউআরএল স্ট্রিং তৈরি করা হলো
+    const url = `${baseUrl}?page=${page}&limit=${limit}&search=${search}&category=${category}`;
 
-    // ⚙️ ডাইনামিক কুয়েরি অবজেক্ট
-    let query = { status: "Published" }; 
-
-    if (search) {
-      query.title = { $regex: search, $options: "i" }; 
-    }
-
-    if (category && category !== "All") {
-      query.category = category;
-    }
-
-    const totalBooks = await booksCollection.countDocuments(query);
-
-    const rawBooks = await booksCollection.find(query)
-                                         .skip(skip)
-                                         .limit(limit)
-                                         .toArray();
-
-    // 🛡️ আইডি অবজেক্টকে স্ট্রিং-এ কনভার্ট করার সেফটি গার্ড ভাই
-    const books = rawBooks.map(book => ({
-      ...book,
-      _id: book._id?.toString() || (book._id?.$oid ? book._id.$oid : book._id)
-    }));
-
-    res.status(200).json({
-      success: true,
-      books,
-      totalBooks,
-      totalPages: Math.ceil(totalBooks / limit),
-      currentPage: page
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      cache: 'no-store' // ফ্রেশ ডাটা ইনস্ট্যান্ট লোড করার জন্য
     });
 
+    if (!res.ok) {
+      return { success: false, books: [], totalPages: 1 };
+    }
+
+    return await res.json();
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Fetch Failure Error in getBooks API:", error);
+    return { success: false, books: [], totalPages: 1 };
   }
-});
+};
 
 
     // 🟢 আপনার এক্সপ্রেস ব্যাকএন্ডের রাউট স্ট্রাকচার এমন হওয়া উচিত:
@@ -201,7 +185,7 @@ app.get('/api/books', async (req, res) => {
     });
 
 
-    app.delete('/books/:id', async (req, res) => {
+    app.delete('/ap/books/:id', async (req, res) => {
       try {
         const id = req.params.id;
 

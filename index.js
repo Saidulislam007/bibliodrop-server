@@ -27,41 +27,41 @@ app.use(cookieParser());
 
 // 🟢 JWT ভেরিফিকেশন মিডলওয়্যার
 // 📄 আপনার ব্যাকএন্ড সার্ভারের (index.js) verifyJWT ফাংশনটি এভাবে আপডেট করুন ভাই
-const verifyJWT = (req, res, next) => {
-  try {
-    // 🟢 Better-Auth এর কুকি নাম অথবা Authorization হেডার থেকে টোকেনটি রিড করবে
-    const token = req.cookies?.["__Secure-better-auth.session_token"] || 
-                  req.cookies?.token || 
-                  req.headers.authorization?.split(' ')[1];
+// const verifyJWT = (req, res, next) => {
+//   try {
+//     // 🟢 Better-Auth এর কুকি নাম অথবা Authorization হেডার থেকে টোকেনটি রিড করবে
+//     const token = req.cookies?.["__Secure-better-auth.session_token"] || 
+//                   req.cookies?.token || 
+//                   req.headers.authorization?.split(' ')[1];
 
-    // ডিবাগ করার জন্য সার্ভার কনসোলে চেক করুন টোকেন পাচ্ছে কিনা
-    console.log("Received Token in Backend:", token ? "Found ✅" : "Missing ❌");
+//     // ডিবাগ করার জন্য সার্ভার কনসোলে চেক করুন টোকেন পাচ্ছে কিনা
+//     console.log("Received Token in Backend:", token ? "Found ✅" : "Missing ❌");
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "🔒 Access Unauthorized: Token payload missing in registry."
-      });
-    }
+//     if (!token) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "🔒 Access Unauthorized: Token payload missing in registry."
+//       });
+//     }
 
-    // ⚠️ Better-Auth যদি নিজস্ব এনক্রিপশন ব্যবহার করে, তবে সরাসরি jwt.verify কাজ নাও করতে পারে।
-    // কিন্তু যদি আপনি ম্যানুয়ালি সাইন করা JWT এই কুকিতে রাখেন, তবে নিচের কোড ঠিক আছে:
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-      if (err) {
-        return res.status(403).json({
-          success: false,
-          message: "🚫 Forbidden: Invalid or expired encryption token."
-        });
-      }
+//     // ⚠️ Better-Auth যদি নিজস্ব এনক্রিপশন ব্যবহার করে, তবে সরাসরি jwt.verify কাজ নাও করতে পারে।
+//     // কিন্তু যদি আপনি ম্যানুয়ালি সাইন করা JWT এই কুকিতে রাখেন, তবে নিচের কোড ঠিক আছে:
+//     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+//       if (err) {
+//         return res.status(403).json({
+//           success: false,
+//           message: "🚫 Forbidden: Invalid or expired encryption token."
+//         });
+//       }
 
-      req.user = decoded; 
-      next(); 
-    });
+//       req.user = decoded; 
+//       next(); 
+//     });
 
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Internal Auth Node Collapse: " + error.message });
-  }
-};
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: "Internal Auth Node Collapse: " + error.message });
+//   }
+// };
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
@@ -304,20 +304,21 @@ async function run() {
       }
     });
 
-    app.get('/deliveries', verifyJWT, async (req, res) => {
-      try {
-        const emailQuery = req.query.email;
-        let query = {};
-        if (emailQuery && emailQuery.trim() !== "") {
-          query = { userEmail: emailQuery };
-        }
+    // 📄 আপনার ব্যাকএন্ড সার্ভারের রাউটটি এভাবে মডিফাই করুন ভাই
+app.get('/deliveries', async (req, res) => {
+  try {
+    const emailQuery = req.query.email;
+    let query = {};
+    if (emailQuery && emailQuery.trim() !== "") {
+      query = { userEmail: emailQuery };
+    }
 
-        const result = await deliveriesCollection.find(query).toArray();
-        res.status(200).json(result);
-      } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-      }
-    });
+    const result = await deliveriesCollection.find(query).toArray();
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
     app.patch('/deliveries/:id', async (req, res) => {
       try {

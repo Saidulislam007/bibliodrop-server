@@ -9,10 +9,15 @@ const app = express();
 const port = process.env.PORT || 5000; // 🟢 রেন্ডার বা প্রোডাকশনের জন্য পোর্ট ডাইনামিক করা হলো
 
 // 🟢 এক্সপ্রেস মিডলওয়্যার রেজিস্ট্রি
+// 📄 আপনার ব্যাকএন্ড সার্ভার কোড (Express.js)
+const cors = require('cors');
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL, // আপনার ফ্রন্টএন্ডের ইউআরএল
-  credentials: true, // এটি কুকি এবং ক্রেডেনশিয়াল হ্যান্ডশেক পাস করতে সাহায্য করবে ভাই
-  optionsSuccessStatus: 200
+  // 🟢 আপনার ফ্রন্টএন্ডের ওরিজিনাল URL দিন (যেমন: localhost বা Vercel ডোমেইন)
+  origin: ['http://localhost:3000', process.env.FRONTEND_URL ], 
+  credentials: true, // 👈 এই লাইনটি মাস্ট! এটি কুকি ও হেডার পাস করতে দেয়
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(cookieParser());

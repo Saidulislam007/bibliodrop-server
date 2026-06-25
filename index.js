@@ -26,9 +26,16 @@ app.use(express.json());
 app.use(cookieParser());
 
 // 🟢 JWT ভেরিফিকেশন মিডলওয়্যার
+// 📄 আপনার ব্যাকএন্ড সার্ভারের (index.js) verifyJWT ফাংশনটি এভাবে আপডেট করুন ভাই
 const verifyJWT = (req, res, next) => {
   try {
-    const token = req.cookies?.token;
+    // 🟢 Better-Auth এর কুকি নাম অথবা Authorization হেডার থেকে টোকেনটি রিড করবে
+    const token = req.cookies?.["__Secure-better-auth.session_token"] || 
+                  req.cookies?.token || 
+                  req.headers.authorization?.split(' ')[1];
+
+    // ডিবাগ করার জন্য সার্ভার কনসোলে চেক করুন টোকেন পাচ্ছে কিনা
+    console.log("Received Token in Backend:", token ? "Found ✅" : "Missing ❌");
 
     if (!token) {
       return res.status(401).json({
@@ -37,6 +44,8 @@ const verifyJWT = (req, res, next) => {
       });
     }
 
+    // ⚠️ Better-Auth যদি নিজস্ব এনক্রিপশন ব্যবহার করে, তবে সরাসরি jwt.verify কাজ নাও করতে পারে।
+    // কিন্তু যদি আপনি ম্যানুয়ালি সাইন করা JWT এই কুকিতে রাখেন, তবে নিচের কোড ঠিক আছে:
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {
         return res.status(403).json({

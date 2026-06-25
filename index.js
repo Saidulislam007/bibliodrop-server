@@ -161,27 +161,24 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/books', async (req, res) => {
-      try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 6;
-        const skip = (page - 1) * limit;
-        const query = { status: "Published" };
+    // 📄 আপনার এক্সপ্রেস ব্যাকএন্ডের (index.js) app.get('/books') রাউটটি এমন করুন:
+app.get('/books', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
 
-        const totalBooks = await booksCollection.countDocuments(query);
-        const books = await booksCollection.find(query).skip(skip).limit(limit).toArray();
+    // 🟢 ফিক্সড: যদি কোনো স্পেসিফিক স্ট্যাটাস কুয়েরি না থাকে, তবে সব বই-ই খুঁজবে (অ্যাপ্রুভালের সুবিধার্থে)
+    const query = {}; 
 
-        res.status(200).json({
-          success: true,
-          books,
-          totalBooks,
-          totalPages: Math.ceil(totalBooks / limit),
-          currentPage: page
-        });
-      } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-      }
-    });
+    const totalBooks = await booksCollection.countDocuments(query);
+    const books = await booksCollection.find(query).skip(skip).limit(limit).toArray();
+
+    res.status(200).json({ success: true, books, totalBooks });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
     app.patch('/books/:id', async (req, res) => {
       try {

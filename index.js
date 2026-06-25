@@ -127,7 +127,7 @@ const client = new MongoClient(uri, {
       }
     });
 
-    app.post('/books', async (req, res) => {
+    app.post('/api/books', async (req, res) => {
       const book = req.body;
       const result = await booksCollection.insertOne(book);
       res.send(result);
@@ -136,7 +136,6 @@ const client = new MongoClient(uri, {
     // Express Backend: Pagination Route
 app.get('/api/books', async (req, res) => {
   try {
-    // ফ্রন্টএন্ড থেকে পাঠানো প্যারামিটার রিসিভ করা হলো ভাই
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 6;
     const search = req.query.search || "";
@@ -145,26 +144,28 @@ app.get('/api/books', async (req, res) => {
     const skip = (page - 1) * limit;
 
     // ⚙️ ডাইনামিক কুয়েরি অবজেক্ট
-    let query = { status: "Published" }; // শুধুমাত্র পাবলিশড বই সবসময় আসবে
+    let query = { status: "Published" }; 
 
-    // যদি ফ্রন্টএন্ড থেকে সার্চ কি-ওয়ার্ড আসে
     if (search) {
-      query.title = { $regex: search, $options: "i" }; // Case-insensitive সার্চ
+      query.title = { $regex: search, $options: "i" }; 
     }
 
-    // যদি নির্দিষ্ট কোনো ক্যাটাগরি সিলেক্ট করা থাকে
     if (category && category !== "All") {
       query.category = category;
     }
 
-    // ১. ফিল্টার করা কুয়েরি অনুযায়ী টোটাল বুক কাউন্ট
     const totalBooks = await booksCollection.countDocuments(query);
 
-    // ২. নির্দিষ্ট পেজের ডাটা স্কিপ ও লিমিট করে তুলে আনা
-    const books = await booksCollection.find(query)
-                                       .skip(skip)
-                                       .limit(limit)
-                                       .toArray();
+    const rawBooks = await booksCollection.find(query)
+                                         .skip(skip)
+                                         .limit(limit)
+                                         .toArray();
+
+    // 🛡️ আইডি অবজেক্টকে স্ট্রিং-এ কনভার্ট করার সেফটি গার্ড ভাই
+    const books = rawBooks.map(book => ({
+      ...book,
+      _id: book._id?.toString() || (book._id?.$oid ? book._id.$oid : book._id)
+    }));
 
     res.status(200).json({
       success: true,

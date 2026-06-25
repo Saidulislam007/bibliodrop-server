@@ -5,14 +5,16 @@ const app = express()
 const port = 5000
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 app.use(cors({
-  origin: ['http://localhost:3000'], // আপনার ফ্রন্টএন্ডের ইউআরএল
-  credentials: true, // এটি কুকি এবং ক্রেডেনশিয়াল হ্যান্ডশেক পাস করতে সাহায্য করবে ভাই
+  origin: [
+     // লোকাল হোস্টে কাজ করার জন্য
+    process.env.FRONTEND_URL // Vercel-এর লাইভ ফ্রন্টএন্ডের জন্য
+  ], 
+  credentials: true, 
   optionsSuccessStatus: 200
 }));
 app.use(express.json());
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
-
 // 🟢 এক্সপ্রেস মিডলওয়্যার রেজিস্ট্রি
 app.use(cookieParser());
 
@@ -31,10 +33,13 @@ const client = new MongoClient(uri, {
   }
 });
 
-async function run() {
-  try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+// async function run() {
+//   try {
+//     // Connect the client to the server	(optional starting in v4.7)
+//     await client.connect();
+    client.connect(()=>{
+      console.log('connecting to mongo db')
+    }).catch(console.dir);
 
     const database = client.db("bibliodrop");
     const booksCollection = database.collection("books");
@@ -129,27 +134,38 @@ async function run() {
     });
 
     // Express Backend: Pagination Route
-app.get('/books', async (req, res) => {
+app.get('/api/books', async (req, res) => {
   try {
-    // ফ্রন্টএন্ড থেকে পাঠানো page এবং limit রিড করা (ডিফল্ট: page=1, limit=6)
+    // ফ্রন্টএন্ড থেকে পাঠানো প্যারামিটার রিসিভ করা হলো ভাই
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 6;
+    const search = req.query.search || "";
+    const category = req.query.category || "All";
     
-    // ডাটা স্কিপ করার হিসাব (যেমন: page ২ হলে প্রথম ৬টা স্কিপ হবে)
     const skip = (page - 1) * limit;
 
-    const query = { status: "Published" }; // শুধুমাত্র পাবলিশড বই
+    // ⚙️ ডাইনামিক কুয়েরি অবজেক্ট
+    let query = { status: "Published" }; // শুধুমাত্র পাবলিশড বই সবসময় আসবে
 
-    // ১. টোটাল কতগুলো বই আছে তা কাউন্ট করা (টোটাল পেজ হিসাবের জন্য ভাই)
+    // যদি ফ্রন্টএন্ড থেকে সার্চ কি-ওয়ার্ড আসে
+    if (search) {
+      query.title = { $regex: search, $options: "i" }; // Case-insensitive সার্চ
+    }
+
+    // যদি নির্দিষ্ট কোনো ক্যাটাগরি সিলেক্ট করা থাকে
+    if (category && category !== "All") {
+      query.category = category;
+    }
+
+    // ১. ফিল্টার করা কুয়েরি অনুযায়ী টোটাল বুক কাউন্ট
     const totalBooks = await booksCollection.countDocuments(query);
 
     // ২. নির্দিষ্ট পেজের ডাটা স্কিপ ও লিমিট করে তুলে আনা
     const books = await booksCollection.find(query)
-                                      .skip(skip)
-                                      .limit(limit)
-                                      .toArray();
+                                       .skip(skip)
+                                       .limit(limit)
+                                       .toArray();
 
-    // রেসপন্সে ডাটা এবং টোটাল কাউন্ট একসাথে পাঠানো হলো
     res.status(200).json({
       success: true,
       books,
@@ -465,7 +481,7 @@ app.get('/books', async (req, res) => {
       }
     });
 
-    const { ObjectId } = require('mongodb'); // 👈 ফাইলের শুরুতে ObjectId ইম্পোর্ট করা না থাকলে এটি নিশ্চিত করে নিবেন ভাই
+    // const { ObjectId } = require('mongodb'); // 👈 ফাইলের শুরুতে ObjectId ইম্পোর্ট করা না থাকলে এটি নিশ্চিত করে নিবেন ভাই
 
 // ==========================================
 // ✏️ ১. REVIEW EDIT/UPDATE METHOD (PUT)
@@ -652,14 +668,14 @@ app.delete('/reviews/:id', verifyJWT, async (req, res) => {
 
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
-  }
-}
-run().catch(console.dir);
+    // await client.db("admin").command({ ping: 1 });
+//     console.log("Pinged your deployment. You successfully connected to MongoDB!");
+//   } finally {
+//     // Ensures that the client will close when you finish/error
+//     // await client.close();
+//   }
+// }
+// run().catch(console.dir);
 
 
 
@@ -668,3 +684,5 @@ run().catch(console.dir);
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
+
+module.exports =app;

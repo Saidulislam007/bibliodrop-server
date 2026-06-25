@@ -14,7 +14,7 @@ const cors = require('cors');
 
 app.use(cors({
   // 🟢 আপনার ফ্রন্টএন্ডের ওরিজিনাল URL দিন (যেমন: localhost বা Vercel ডোমেইন)
-  origin: ['http://localhost:3000', process.env.FRONTEND_URL ], 
+  origin:  process.env.FRONTEND_URL , 
   credentials: true, // 👈 এই লাইনটি মাস্ট! এটি কুকি ও হেডার পাস করতে দেয়
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

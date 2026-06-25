@@ -8,7 +8,6 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const port = process.env.PORT || 5000; 
 
-// 🟢 এক্সপ্রেস মিডলওয়্যার রেজিস্ট্রি (ডুপ্লিকেট রিমুভ করা হয়েছে)
 const allowedOrigins = ['http://localhost:3000'];
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
@@ -18,7 +17,8 @@ app.use(cors({
   origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  // 🟢 এখানে 'x-user-email' কাস্টম হেডারটি এলাউ করে দেওয়া হলো
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-email'] 
 }));
 
 // এক্সপ্রেস বডি পার্সার ও কুকি পার্সার মিডলওয়্যার
